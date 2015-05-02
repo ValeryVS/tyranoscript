@@ -298,15 +298,14 @@ tyrano.plugin.kag.menu ={
                     // console.log(canvas);
 
                     // scale canvas to get thumbnail
-                    // var thumbWidth  = that.kag.config.saveThumbWidth ? that.kag.config.saveThumbWidth : canvas.width/10,
-                    //     thumbHeight = that.kag.config.saveThumbHeight ? that.kag.config.saveThumbHeight : canvas.height/10;
-                    // var thumb = document.createElement('canvas');
-                    // thumb.setAttribute('width',thumbWidth);
-                    // thumb.setAttribute('height',thumbHeight);
-                    // var thumbCTX = thumb.getContext('2d');
-                    // thumbCTX.drawImage(canvas,0,0,canvas.width, canvas.height,0,0,thumbWidth,thumbHeight);
-                    // var img_code = thumb.toDataURL();
-                    var img_code = canvas.toDataURL();
+                    var thumbWidth  = that.kag.config.saveThumbWidth ? that.kag.config.saveThumbWidth : canvas.width/10,
+                        thumbHeight = that.kag.config.saveThumbHeight ? that.kag.config.saveThumbHeight : canvas.height/10;
+                    var thumb = document.createElement('canvas');
+                    thumb.setAttribute('width',thumbWidth);
+                    thumb.setAttribute('height',thumbHeight);
+                    var thumbCTX = thumb.getContext('2d');
+                    thumbCTX.drawImage(canvas,0,0,canvas.width, canvas.height,0,0,thumbWidth,thumbHeight);
+                    var img_code = thumb.toDataURL();
                     
                     /*
                     scenario = scenario || "";
