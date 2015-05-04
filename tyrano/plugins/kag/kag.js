@@ -52,7 +52,8 @@ tyrano.plugin.kag ={
         
         num_anim:0, //実行中のアニメーションスタック
         map_bgm:{}, //再生中の音楽オーディオ
-        map_se:{} //再生中の効果音
+        map_se:{}, //再生中の効果音
+        map_ambience:{}
         
     },
     
@@ -95,7 +96,8 @@ tyrano.plugin.kag ={
         set_text_span:false,//メッセージ中のspanを新しく作成するときに真にする
         current_scenario:"first.ks",//シナリオファイルを指定する
         is_skip:{},
-        current_bgm:"", //現在再生中のBGM
+        current_bgm:[], //現在再生中のBGM
+        current_ambience:[],
         
         current_line:0, //実行中の命令の実際のファイル行　エラーや警告時に使用
         

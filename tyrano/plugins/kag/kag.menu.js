@@ -439,6 +439,8 @@ tyrano.plugin.kag.menu ={
     },
     
     loadGameData:function(data){
+
+        var that = this;
         
         var auto_next = "no";
         
@@ -461,22 +463,20 @@ tyrano.plugin.kag.menu ={
         
         this.kag.ftag.startTag("stopbgm",{stop:"true"});
         this.kag.ftag.startTag("stopse",{stop:"true"});
+        this.kag.ftag.startTag("stopambience",{stop:"true"});
          
         //音楽再生
-        if(this.kag.stat.current_bgm != ""){
-        
-            var mstorage = this.kag.stat.current_bgm;
-            
-            var pm ={
-                loop:"true",
-                storage:mstorage,
-                /*fadein:"true",*/
-                /*time:2000,*/
-                stop:"true"
-            };
-                    
-            this.kag.ftag.startTag("playbgm",pm);
-    
+        if (this.kag.stat.current_bgm && this.kag.stat.current_bgm.length > 0) {
+            this.kag.stat.current_bgm.forEach(function(item,i,arr){
+                item.stop = false; // prevent step to next tag
+                that.kag.ftag.startTag("playbgm",item);
+            })
+        }
+        if (this.kag.stat.current_ambience && this.kag.stat.current_ambience.length > 0) {
+            this.kag.stat.current_ambience.forEach(function(item,i,arr){
+                item.stop = false; // prevent step to next tag
+                that.kag.ftag.startTag("playambience",item);
+            })
         }
         
         //カーソルの復元
