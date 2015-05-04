@@ -2905,7 +2905,6 @@ tyrano.plugin.kag.tag.button = {
                         case "window":
                             that.kag.layer.hideMessageLayers();
                             break;
-                            break;
                         case "title":
                             if (!confirm("タイトルに戻ります。よろしいですね？")) {
                                 return false;
@@ -2914,13 +2913,21 @@ tyrano.plugin.kag.tag.button = {
                             location.reload();
                             break;
                         case "menu":
-                            that.kag.ftag.startTag("showmenu", {});
+                            that.kag.menu.showMenu();
                             break;
                         case "skip":
                             that.kag.ftag.startTag("skipstart", {});
                             break;
                         case "backlog":
-                            that.kag.ftag.startTag("showlog", {});
+                            that.kag.menu.displayLog();
+                            break;
+
+                        case "quicksave":
+                            that.kag.menu.doSetQuickSave();
+                            break;
+
+                        case "quickload":
+                            that.kag.menu.loadQuickSave();
                             break;
 
                     }
