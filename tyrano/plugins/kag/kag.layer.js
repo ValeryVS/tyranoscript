@@ -55,6 +55,7 @@ tyrano.plugin.kag.layer ={
             
             if(that.kag.stat.is_hide_message == true){
                 that.showMessageLayers();
+                return;
             }
             
             that.kag.ftag.nextOrder();
