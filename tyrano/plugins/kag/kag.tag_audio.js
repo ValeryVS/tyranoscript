@@ -53,6 +53,11 @@ tyrano.plugin.kag.tag.playbgm = {
             return ;
         }
         
+        if(pm.target=="ambience" && that.kag.stat.play_ambience == false){
+            that.kag.ftag.nextOrder();
+            return ;
+        }
+        
         
         //スマホアプリの場合
         if(that.kag.define.FLAG_APRI == true){
@@ -114,7 +119,7 @@ tyrano.plugin.kag.tag.playbgm = {
         
         var target = "bgm";
         
-        if(pm.target =="se"){
+        if(pm.target =="se" || pm.target =="ambience"){
             target = "sound";
         }
         
@@ -136,12 +141,17 @@ tyrano.plugin.kag.tag.playbgm = {
            }; 
         }
         
-        if(target ==="bgm"){
-            this.kag.tmp.map_bgm[pm.storage] = audio_obj;
-            that.kag.stat.current_bgm = pm.storage;
-            
-        }else{
-            this.kag.tmp.map_se[pm.storage] = audio_obj;
+        switch (pm.target) {
+            case "se":
+                this.kag.tmp.map_se[pm.storage] = audio_obj;
+                break;
+            case "ambience":
+                this.kag.tmp.map_ambience[pm.storage] = audio_obj;
+                that.kag.stat.current_ambience.push(pm);
+                break;
+            case "bgm":
+                this.kag.tmp.map_bgm[pm.storage] = audio_obj;
+                that.kag.stat.current_bgm.push(pm);
         }
         
         audio_obj.play();
@@ -176,16 +186,23 @@ tyrano.plugin.kag.tag.playbgm = {
         var that = this;
         
         var target = "bgm";
-        if(pm.target =="se"){
+        if(pm.target =="se" || pm.target =="ambience"){
             target = "sound";
         }
         
         var audio_obj = null;
-        
-        if(target ==="bgm"){
-            this.kag.stat.current_bgm = pm.storage;
+
+        switch (pm.target) {
+            case "se":
+                // do nothing
+                break;
+            case "ambience":
+                that.kag.stat.current_ambience.push(pm);
+                break;
+            case "bgm":
+                this.kag.stat.current_bgm.push(pm);
         }
-        
+
         //iphone の場合
         var src_url = "./data/"+target+"/"+ pm.storage;
         
@@ -194,34 +211,38 @@ tyrano.plugin.kag.tag.playbgm = {
             src_url = $.getBaseURL()+"data/"+target+"/"+ pm.storage;
         }
         
-        var audio_obj = new Media(src_url,
- 
-           function(){
-                        
-                                  
-                        if(pm.loop == "true"){
-                            
-                                  var tmp_obj = null;
-                                  
-                                  if(pm.target =="bgm"){
-                                    tmp_obj = that.kag.tmp.map_bgm[pm.storage] ;
-                                  }else{
-                                    tmp_obj = that.kag.tmp.map_se[pm.storage];
-                                  }
-                                  
-                                  if(tmp_obj != null){
-                                    audio_obj.play();
-                                  }
-                        
-                        }
-                        
-             });
+        var audio_obj = new Media(src_url, function(){
+            if (pm.loop == "true") {
+                var tmp_obj = null;
 
-        
-        if(pm.target =="bgm"){
-            this.kag.tmp.map_bgm[pm.storage] = audio_obj;
-        }else{
-            this.kag.tmp.map_se[pm.storage] = audio_obj;
+                switch (pm.target) {
+                    case "se":
+                        tmp_obj = that.kag.tmp.map_se[pm.storage];
+                        this.kag.tmp.map_se[pm.storage] = audio_obj;
+                        break;
+                    case "ambience":
+                        tmp_obj = that.kag.tmp.map_ambience[pm.storage];
+                        break;
+                    case "bgm":
+                        tmp_obj = that.kag.tmp.map_bgm[pm.storage];
+                }
+
+                if(tmp_obj != null){
+                    audio_obj.play();
+                }
+            }
+        });
+
+
+        switch (pm.target) {
+            case "se":
+                this.kag.tmp.map_se[pm.storage] = audio_obj;
+                break;
+            case "ambience":
+                this.kag.tmp.map_ambience[pm.storage] = audio_obj;
+                break;
+            case "bgm":
+                this.kag.tmp.map_bgm[pm.storage] = audio_obj;
         }
         
         //audio_obj.play();     
@@ -248,7 +269,7 @@ tyrano.plugin.kag.tag.playbgm = {
         
         var target = "bgm";
         
-        if(pm.target =="se"){
+        if(pm.target =="se" || pm.target =="ambience"){
             target = "sound";
         }
         
@@ -261,7 +282,7 @@ tyrano.plugin.kag.tag.playbgm = {
         
         
         var target = "bgm";
-        if(pm.target =="se"){
+        if(pm.target =="se" || pm.target =="ambience"){
             target = "sound";
         }
         
@@ -272,12 +293,18 @@ tyrano.plugin.kag.tag.playbgm = {
     	 }else{
     	    storage_url = "./data/"+target+"/" + pm.storage;
     	 }
-        
-        if(target ==="bgm"){
-            this.kag.stat.current_bgm = pm.storage;
-            this.kag.sound_swf.playMusic(storage_url ,repeat);
-        }else{
-            this.kag.sound_swf.playSound(storage_url ,repeat);
+
+        switch (pm.target) {
+            case "se":
+                this.kag.sound_swf.playSound(storage_url ,repeat);
+                break;
+            case "ambience":
+                this.kag.stat.current_ambience.push(pm);
+                this.kag.sound_swf.playSound(storage_url ,repeat);
+                break;
+            case "bgm":
+                this.kag.stat.current_bgm.push(pm);
+                this.kag.sound_swf.playMusic(storage_url ,repeat);
         }
         
         
@@ -321,11 +348,16 @@ tyrano.plugin.kag.tag.stopbgm = {
         var that = this;
         
         var target_map =null;
-        
-        if(pm.target =="bgm"){
-            target_map = this.kag.tmp.map_bgm;
-        }else{
-            target_map = this.kag.tmp.map_se;
+
+        switch (pm.target) {
+            case "se":
+                target_map = this.kag.tmp.map_se;
+                break;
+            case "ambience":
+                target_map = this.kag.tmp.map_ambience;
+                break;
+            case "bgm":
+                target_map = this.kag.tmp.map_bgm;
         }
         
         var browser = $.getBrowser();
@@ -340,25 +372,37 @@ tyrano.plugin.kag.tag.stopbgm = {
                         var _key = key;
                         var _audio_obj = null;
                         
-                        if(pm.target ==="bgm"){
-                            _audio_obj = target_map[_key];
-                             
-                             //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
-                              if(pm.stop == "false"){
-                                that.kag.stat.current_bgm = "";
-                              }
-                              
-                        }else{
-                            _audio_obj = target_map[_key];
+                        _audio_obj = target_map[_key];
+
+                        switch (pm.target) {
+                            case "se":
+                                // do nothing
+                                break;
+                            case "ambience":
+                                if(pm.stop == "false"){
+                                    that.kag.stat.current_ambience = [];
+                                }
+                                break;
+                            case "bgm":
+                                //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
+                                if(pm.stop == "false"){
+                                    that.kag.stat.current_bgm = [];
+                                }
                         }
-                        
-                        if(pm.target ==="bgm"){
-                            that.kag.tmp.map_bgm[_key] = null;
-                            delete that.kag.tmp.map_bgm[_key] ;
-                         }else{
-                            that.kag.tmp.map_se[_key] = null;
-                            delete that.kag.tmp.map_se[_key] ;
-                         }
+
+                        switch (pm.target) {
+                            case "se":
+                                that.kag.tmp.map_se[_key] = null;
+                                delete that.kag.tmp.map_se[_key];
+                                break;
+                            case "ambience":
+                                that.kag.tmp.map_ambience[_key] = null;
+                                delete that.kag.tmp.map_ambience[_key];
+                                break;
+                            case "bgm":
+                                that.kag.tmp.map_bgm[_key] = null;
+                                delete that.kag.tmp.map_bgm[_key];
+                        }
                         
                         //上記マップを削除した後に、ストップ処理を行うといいのではないか。 
                         _audio_obj.stop();
@@ -378,14 +422,24 @@ tyrano.plugin.kag.tag.stopbgm = {
             //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
             
             var target = "bgm";
-            if(pm.target =="se"){
+            if(pm.target =="se" || pm.target =="ambience"){
                 target = "sound";
             }
-            if(target ==="bgm"){
-                 //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
-                 if(pm.stop == "false"){
-                    that.kag.stat.current_bgm = "";
-                 }
+
+            switch (pm.target) {
+                case "se":
+                    // do nothing
+                    break;
+                case "ambience":
+                    if(pm.stop == "false"){
+                        that.kag.stat.current_ambience = [];
+                    }
+                    break;
+                case "bgm":
+                    //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
+                    if(pm.stop == "false"){
+                        that.kag.stat.current_bgm = [];
+                    }
             }
         
             
@@ -400,16 +454,21 @@ tyrano.plugin.kag.tag.stopbgm = {
                         
                         var _audio_obj = null;
                         
-                        if(pm.target ==="bgm"){
-                            _audio_obj = target_map[_key];
-                             
-                             //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
-                              if(pm.stop == "false"){
-                                that.kag.stat.current_bgm = "";
-                              }
-                              
-                        }else{
-                            _audio_obj = target_map[_key];
+                        _audio_obj = target_map[_key];
+                        switch (pm.target) {
+                            case "se":
+                                // do nothing
+                                break;
+                            case "ambience":
+                                if(pm.stop == "false"){
+                                    that.kag.stat.current_ambience = [];
+                                }
+                                break;
+                            case "bgm":
+                                //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
+                                if(pm.stop == "false"){
+                                    that.kag.stat.current_bgm = [];
+                                }
                         }
                         
                         //フェードアウトしながら再生停止
@@ -432,13 +491,16 @@ tyrano.plugin.kag.tag.stopbgm = {
                         }else{
                             
                             _audio_obj.pause();
-                            
-                            if(pm.target ==="bgm"){
-                                delete that.kag.tmp.map_bgm[_key] ;
-                                
-                            }else{
-                                delete that.kag.tmp.map_se[_key] ;
-                                
+
+                            switch (pm.target) {
+                                case "se":
+                                    delete that.kag.tmp.map_se[_key];
+                                    break;
+                                case "ambience":
+                                    delete that.kag.tmp.map_ambience[_key];
+                                    break;
+                                case "bgm":
+                                    delete that.kag.tmp.map_bgm[_key];
                             }
                         
                         }
@@ -700,6 +762,146 @@ tyrano.plugin.kag.tag.fadeoutse = {
     pm:{
         storage:"",
         target:"se",
+        loop:"false",
+        fadeout:"true"
+    },
+    
+    start:function(pm){
+        
+        this.kag.ftag.startTag("stopbgm",pm);
+        
+    }
+    
+};
+
+/*
+#[playambience]
+:group
+オーディオ関連
+:title
+ambienceの再生
+:exp
+ambienceを再生します
+ambienceファイルはプロジェクトフォルダのsoundフォルダに入れてください
+:sample
+[playambience storage=sound.mp3 loop=false ]
+:param
+storage=再生するファイルを指定してください,
+loop=trueまたはfalse （デフォルト）を指定してください。trueを指定すると繰り返し再生されます,
+clear=trueまたはfalse(デフォルト) 他のSEが鳴っている場合、trueだと他のSEを停止した後、再生します。音声などはtrueが便利でしょう
+#[end]
+*/
+
+tyrano.plugin.kag.tag.playambience = {
+    
+    vital:["storage"],
+    
+    pm:{
+        storage:"",
+        target:"ambience",
+        loop:"false",
+        clear:"false" //他のSEがなっている場合、それをキャンセルして、新しく再生します
+    },
+    
+    start:function(pm){
+        
+        if(pm.clear == "true"){
+            this.kag.ftag.startTag("stopbgm",{target:"ambience",stop:"true"});
+        }
+        
+        this.kag.ftag.startTag("playbgm",pm);
+        
+    }
+    
+};
+
+/*
+#[stopambience]
+:group
+オーディオ関連
+:title
+ambienceの停止
+:exp
+ambienceを再生を停止します
+:sample
+[stopambience ]
+:param
+#[end]
+*/
+
+tyrano.plugin.kag.tag.stopambience = {
+    
+    pm:{
+        storage:"",
+        fadeout:"false",
+        time:2000,
+        target:"ambience"
+    },
+    
+    start:function(pm){
+        this.kag.ftag.startTag("stopbgm",pm);
+    }
+    
+};
+
+/*
+#[fadeinambience]
+:group
+オーディオ関連
+:title
+ambienceのフェードイン
+:exp
+ambienceをフェードインしながら再生します
+:sample
+[fadeinambience storage=sound.mp3 loop=false time=2000 ]
+:param
+storage=次に再生するファイルを指定してください,
+loop=trueまたはfalse （デフォルト）を指定してください。trueを指定すると繰り返し再生されます,
+time=フェードインの時間をミリ秒で指定します
+#[end]
+*/
+
+tyrano.plugin.kag.tag.fadeinambience = {
+    
+    vital:["storage","time"],
+    
+    pm:{
+        storage:"",
+        target:"ambience",
+        loop:"false",
+        fadein:"true",
+        time:"2000"
+        
+    },
+    
+    start:function(pm){
+        
+        this.kag.ftag.startTag("playbgm",pm);
+        
+    }
+    
+};
+
+/*
+#[fadeoutambience]
+:group
+オーディオ関連
+:title
+ambienceの再生
+:exp
+ambienceをフェードアウトします
+:sample
+[fadeoutambience time=2000 ]
+:param
+time=フェードアウトを行なっている時間をミリ秒で指定します。
+#[end]
+*/
+
+tyrano.plugin.kag.tag.fadeoutambience = {
+    
+    pm:{
+        storage:"",
+        target:"ambience",
         loop:"false",
         fadeout:"true"
     },
