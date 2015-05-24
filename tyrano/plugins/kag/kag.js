@@ -716,10 +716,9 @@ tyrano.plugin.kag ={
                 var html = tmpl.render(data);
                 callback($(html));
             }
-        }
-        
-        $.loadText("./tyrano/html/"+html_file_name+".html",function(text_str){
-                
+        } else {
+            $.loadText("./tyrano/html/"+html_file_name+".html",function(text_str){
+            
                 var tmpl = $.templates(text_str);
                 var html = tmpl.render(data);
                 
@@ -729,8 +728,9 @@ tyrano.plugin.kag ={
                 if(callback){
                     callback($(html));
                 }
-                
-        });
+            
+            });
+        }
         
     },
     
