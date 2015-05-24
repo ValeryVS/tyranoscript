@@ -141,17 +141,25 @@ tyrano.plugin.kag.tag.playbgm = {
            }; 
         }
         
+        var maxVolume = 1;
+        
         switch (pm.target) {
             case "se":
                 this.kag.tmp.map_se[pm.storage] = audio_obj;
+                maxVolume = this.kag.variable.sf.settings.volume.main/100 * this.kag.variable.sf.settings.volume.se/100;
+                audio_obj.volume = maxVolume;
                 break;
             case "ambience":
                 this.kag.tmp.map_ambience[pm.storage] = audio_obj;
                 that.kag.stat.current_ambience.push(pm);
+                maxVolume = this.kag.variable.sf.settings.volume.main/100 * this.kag.variable.sf.settings.volume.ambience/100;
+                audio_obj.volume = maxVolume;
                 break;
             case "bgm":
                 this.kag.tmp.map_bgm[pm.storage] = audio_obj;
                 that.kag.stat.current_bgm.push(pm);
+                maxVolume = this.kag.variable.sf.settings.volume.main/100 * this.kag.variable.sf.settings.volume.bgm/100;
+                audio_obj.volume = maxVolume;
         }
         
         audio_obj.play();
@@ -160,7 +168,7 @@ tyrano.plugin.kag.tag.playbgm = {
             
             var vars = jQuery.extend($('<div>')[0], { volume: 0 });
             
-            $(vars).stop().animate({ volume: 1 }, {
+            $(vars).stop().animate({ volume: maxVolume }, {
                 easing: "linear",
                 duration: parseInt(pm.time),
                 step: function() {
@@ -218,13 +226,16 @@ tyrano.plugin.kag.tag.playbgm = {
                 switch (pm.target) {
                     case "se":
                         tmp_obj = that.kag.tmp.map_se[pm.storage];
-                        this.kag.tmp.map_se[pm.storage] = audio_obj;
+                        that.kag.tmp.map_se[pm.storage] = audio_obj;
+                        audio_obj.volume = that.kag.variable.sf.settings.volume.main/100 * that.kag.variable.sf.settings.volume.se/100;
                         break;
                     case "ambience":
                         tmp_obj = that.kag.tmp.map_ambience[pm.storage];
+                        audio_obj.volume = that.kag.variable.sf.settings.volume.main/100 * that.kag.variable.sf.settings.volume.ambience/100;
                         break;
                     case "bgm":
                         tmp_obj = that.kag.tmp.map_bgm[pm.storage];
+                        audio_obj.volume = that.kag.variable.sf.settings.volume.main/100 * that.kag.variable.sf.settings.volume.bgm/100;
                 }
 
                 if(tmp_obj != null){
@@ -474,7 +485,7 @@ tyrano.plugin.kag.tag.stopbgm = {
                         //フェードアウトしながら再生停止
                         if(pm.fadeout =="true"){
                             
-                            var vars = jQuery.extend($('<div>')[0], { volume: 1 });
+                            var vars = jQuery.extend($('<div>')[0], { volume: _audio_obj.volume });
                             
                             $(vars).stop().animate({ volume: 0 }, {
                                 easing: "linear",
