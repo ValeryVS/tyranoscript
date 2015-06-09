@@ -445,6 +445,11 @@ tyrano.plugin.kag.menu ={
         //layerの復元
         this.kag.layer.setLayerHtml(data.layer);
         
+        // TODO
+        // copy current_bgm, current_ambience, current_se
+        // and not add it to stat
+        // then start music from this copied list
+        
         //その他ステータスの設定
         this.kag.stat = data.stat;
         
@@ -459,6 +464,9 @@ tyrano.plugin.kag.menu ={
         
         //一旦音楽と効果音は全て止めないと
         
+        // TODO
+        // stop current music before update stat
+        
         this.kag.ftag.startTag("stopbgm",{stop:"true"});
         this.kag.ftag.startTag("stopse",{stop:"true"});
         this.kag.ftag.startTag("stopambience",{stop:"true"});
@@ -466,16 +474,23 @@ tyrano.plugin.kag.menu ={
         //音楽再生
         if (this.kag.stat.current_bgm && this.kag.stat.current_bgm.length > 0) {
             this.kag.stat.current_bgm.forEach(function(item,i,arr){
+                // TODO
+                // for prevent next - "stop" must be true
                 item.stop = false; // prevent step to next tag
                 that.kag.ftag.startTag("playbgm",item);
             })
         }
         if (this.kag.stat.current_ambience && this.kag.stat.current_ambience.length > 0) {
             this.kag.stat.current_ambience.forEach(function(item,i,arr){
+                // TODO
+                // for prevent next - "stop" must be true
                 item.stop = false; // prevent step to next tag
                 that.kag.ftag.startTag("playambience",item);
             })
         }
+        
+        // TODO
+        // after start all music do nextStep() to continue
         
         //カーソルの復元
         this.kag.setCursor(this.kag.stat.current_cursor);
