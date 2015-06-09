@@ -390,11 +390,17 @@ tyrano.plugin.kag.tag.stopbgm = {
                                 // do nothing
                                 break;
                             case "ambience":
+                            	// TODO
+                            	// just clear, without stop==false
+                            	// this logic moved to saveload
                                 if(pm.stop == "false"){
                                     that.kag.stat.current_ambience = [];
                                 }
                                 break;
                             case "bgm":
+                            	// TODO
+                            	// just clear, without stop==false
+                            	// this logic moved to saveload
                                 //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
                                 if(pm.stop == "false"){
                                     that.kag.stat.current_bgm = [];
@@ -442,11 +448,17 @@ tyrano.plugin.kag.tag.stopbgm = {
                     // do nothing
                     break;
                 case "ambience":
+		    // TODO
+		    // just clear, without stop==false
+		    // this logic moved to saveload
                     if(pm.stop == "false"){
                         that.kag.stat.current_ambience = [];
                     }
                     break;
                 case "bgm":
+		    // TODO
+		    // just clear, without stop==false
+		    // this logic moved to saveload
                     //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
                     if(pm.stop == "false"){
                         that.kag.stat.current_bgm = [];
