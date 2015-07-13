@@ -6,8 +6,6 @@ tyrano.plugin.kag ={
     
     kag:null,
     
-    sound_swf:null,
-    
     cache_html:{},
     
     config:{
@@ -39,7 +37,13 @@ tyrano.plugin.kag ={
     //各種変数
     variable:{
         //f:{},//ゲーム変数 stat に移動
-        sf:{},//システム変数
+        sf: {//システム変数
+            settings: {
+                volume: {
+                    main: 100
+                }
+            }
+        },
         tf:{}//一時変数
         //mp:{}//マクロに引き渡された変数がココに入る
         
@@ -51,8 +55,8 @@ tyrano.plugin.kag ={
         checking_macro:false, //マクロの登録時はスタックにつまれない
         
         num_anim:0, //実行中のアニメーションスタック
-        map_bgm:{}, //再生中の音楽オーディオ
-        map_se:{} //再生中の効果音
+        audio_channels: {}, //オーディオチャンネル
+        map_audio: {} //再生中のオーディオ
         
     },
     
@@ -95,7 +99,7 @@ tyrano.plugin.kag ={
         set_text_span:false,//メッセージ中のspanを新しく作成するときに真にする
         current_scenario:"first.ks",//シナリオファイルを指定する
         is_skip:{},
-        current_bgm:"", //現在再生中のBGM
+        current_audio:{}, //現在再生中のオーディオ
         
         current_line:0, //実行中の命令の実際のファイル行　エラーや警告時に使用
         
@@ -184,19 +188,6 @@ tyrano.plugin.kag ={
         //フラッシュの設定
         try{
             var browser = $.getBrowser();
-            //音楽再生にFLASHは関係なくなった
-            /*
-            if(browser == "firefox" || browser =="opera" || (browser =="safari" && $.userenv()=="pc" ) ){
-                
-                if($.isFlashInstalled() != true){
-                    alert("FLASHがインストールされていないため、音楽が再生されません。");
-                }else{
-                    this.kag.sound_swf = $.swfName("externalnovelsound");
-                }
-                
-            }
-            */
-           
         }catch(e){
             console.log(e);
         }
@@ -244,7 +235,13 @@ tyrano.plugin.kag ={
     clearVariable:function(){
         
         this.stat.f ={}; //ゲーム変数
-        this.variable.sf ={}; //システム変数
+        this.variable.sf = {//システム変数
+            settings: {
+                volume: {
+                    main: 100
+                }
+            }
+        };
         this.variable.tf ={}; //一時変数かな
         
         this.saveSystemVariable();
@@ -326,7 +323,13 @@ tyrano.plugin.kag ={
         var tmpsf = $.getStorage(this.kag.config.projectID+"_sf");
         
         if(tmpsf == null){
-            this.variable.sf ={};
+            this.variable.sf = {
+                settings: {
+                    volume: {
+                        main: 100
+                    }
+                }
+            };
         }else{
             this.variable.sf = eval("("+tmpsf+")");
         }
@@ -489,6 +492,27 @@ tyrano.plugin.kag ={
             //最初にレイヤをコピーしておく、、、その必要はない！コメント化20122119
             //that.kag.ftag.startTag("backlay",{});
         
+        });
+        
+        this.kag.ftag.startTag("registerAudioChannel",{
+            name   : 'bgm',
+            folder : 'bgm',
+            save   : true,
+            stop   : true
+        });
+        
+        this.kag.ftag.startTag("registerAudioChannel",{
+            name   : 'se',
+            folder : 'sound',
+            save   : false,
+            stop   : true
+        });
+        
+        this.kag.ftag.startTag("registerAudioChannel",{
+            name   : 'voice',
+            folder : 'voice',
+            save   : false,
+            stop   : true
         });
         
     },

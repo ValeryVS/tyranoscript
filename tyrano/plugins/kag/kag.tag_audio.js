@@ -1,4 +1,307 @@
+tyrano.plugin.kag.tag.registerAudioChannel = {
 
+    vital: ['name'],
+
+    pm: {
+        name   : '',
+        folder : '',
+        save   : false, // start audio layer on game load
+        stop   : false
+    },
+
+    start: function(pm) {
+        // make shure that pm.save is boolean
+        if (pm.save === 'true') {
+            pm.save = true;
+        } else if (pm.save === 'false') {
+            pm.save = false;
+        }
+
+        // make shure that pm.stop is boolean
+        if (pm.stop === 'true') {
+            pm.stop = true;
+        } else if (pm.stop === 'false') {
+            pm.stop = false;
+        }
+
+        // define audio_channels variable if it isn't defined yet
+        if (!this.kag.tmp.audio_channels) {
+            this.kag.tmp.audio_channels = {};
+        }
+        this.kag.tmp.audio_channels[pm.name] = {
+            folder : 'data/' + pm.folder + '/',
+            save   : pm.save
+        }
+
+        this.kag.tmp.map_audio[pm.name] = {};
+        this.kag.stat.current_audio[pm.name] = [];
+
+        // define layer volume variable
+        if (this.kag.variable.sf.settings.volume[pm.name] === undefined) {
+            this.kag.variable.sf.settings.volume[pm.name] = 100;
+        }
+
+        if (pm.stop === false) {
+            this.kag.ftag.nextOrder();
+        }
+    }
+}
+
+tyrano.plugin.kag.tag.playaudio = {
+
+    vital: ["storage","channel"],
+
+    pm: {
+        loop    : "false",
+        storage : "",
+        fadein  : "false",
+        time    : 2000,
+        channel : "",
+        click   : "false", //音楽再生にクリックが必要か否か
+        stop    : "false"  //trueの場合自動的に次の命令へ移動しない。ロード対策
+    },
+
+    start:function(pm){
+
+        if (!this.kag.tmp.audio_channels[pm.channel]) {
+            this.kag.error('Audio cahnnel ' + pm.channel + 'is not defined');
+            return
+        }
+
+        var that = this;
+
+        
+        //スマホアプリの場合
+        if (that.kag.define.FLAG_APRI == true) {
+
+            that.playGap(pm);
+
+        } else if ($.userenv() != "pc") { //スマホからのアクセスの場合は、クリックを挟む
+
+            this.kag.layer.hideEventLayer();
+
+            //スマホからの場合、スキップ中は音楽をならさない
+            if (this.kag.stat.is_skip == true && this.kag.tmp.map_audio[pm.channel].save === false) {
+
+                that.kag.layer.showEventLayer();
+                that.kag.ftag.nextOrder();
+
+            } else {
+
+                if (pm.click == "true") {
+                    $(".tyrano_base").bind("click.bgm",function(){
+                        that.play(pm);
+                        $(".tyrano_base").unbind("click.bgm");
+                        that.kag.layer.showEventLayer();
+                    });
+                } else {
+                    that.play(pm);
+                    $(".tyrano_base").unbind("click.bgm");
+                    that.kag.layer.showEventLayer();
+                }
+
+            }
+
+        } else {
+
+            that.play(pm);
+
+        }
+
+    },
+
+    play: function(pm) {
+
+        var that,
+            audio_obj,
+            baseUrl,
+            storage_url,
+            maxVolume;
+
+        that = this;
+
+        if ($.isHTTP(pm.storage)) {
+            storage_url = pm.storage;   
+        } else {
+            storage_url = './' + this.kag.tmp.audio_channels[pm.channel].folder + pm.storage;
+        }
+
+        //音楽再生
+        var audio_obj = new Audio(storage_url);
+        if (pm.loop == "true") {
+            audio_obj.loop = true;
+
+            audio_obj.onended = function() {
+                this.play();
+            }; 
+        }
+
+        maxVolume = this.kag.variable.sf.settings.volume.main/100 * this.kag.variable.sf.settings.volume[pm.channel]/100;
+
+        audio_obj.volume = maxVolume;
+        this.kag.tmp.map_audio[pm.channel][pm.storage] = audio_obj;
+        that.kag.stat.current_audio[pm.channel].push(pm);
+
+        audio_obj.play();
+
+        if (pm.fadein == "true") {
+
+            var vars = jQuery.extend($('<div>')[0], { volume: 0 });
+
+            $(vars).stop().animate({ volume: maxVolume }, {
+                easing: "linear",
+                duration: parseInt(pm.time),
+                step: function() {
+                    audio_obj.volume = this.volume; // this == vars
+                }
+            });
+
+        }
+
+        if (pm.stop == "false") {
+            this.kag.ftag.nextOrder();
+        }
+    },
+
+    //phonegapで再生する
+    playGap: function(pm) {
+
+        var that,
+            audio_obj,
+            baseUrl,
+            storage_url;
+
+        that = this;
+
+        if ($.userenv()==="android" || $.userenv()==="andoroid") {
+            //android ならパス表記変更
+            baseUrl = $.getBaseURL();
+        } else {
+            //iphone の場合
+            baseUrl = './';
+        }
+
+        storage_url = baseUrl + this.kag.tmp.audio_channels[pm.channel].folder + pm.storage;
+
+        // example: new Media(src, mediaSuccess, [mediaError], [mediaStatus])
+        var audio_obj = new Media(
+            storage_url,        // url
+            null,               // success callback
+            null,               // error callback
+            function(status) {  // status change callback
+                // Statuses list:
+                // 0 - Media.MEDIA_NONE
+                // 1 - Media.MEDIA_STARTING
+                // 2 - Media.MEDIA_RUNNING
+                // 3 - Media.MEDIA_PAUSED
+                // 4 - Media.MEDIA_STOPPED
+                if (pm.loop == "true" && status === Media.MEDIA_STOPPED) {
+                    if (that.kag.tmp.map_audio[pm.channel][pm.storage]) {
+                        audio_obj.play();
+                    }
+                }
+            }
+        );
+
+        audio_obj.setVolume(that.kag.variable.sf.settings.volume.main/100 * that.kag.variable.sf.settings.volume[pm.channel]/100);
+        this.kag.tmp[pm.channel][pm.storage] = audio_obj;
+        that.kag.stat.current_audio[pm.channel].push(pm);
+
+        audio_obj.play();
+
+        if(pm.stop == "false"){
+            this.kag.ftag.nextOrder();
+        }
+
+        
+    },
+
+};
+
+tyrano.plugin.kag.tag.stopaudio = {
+
+    vital: ['channel'],
+
+    pm: {
+        fadeout : "false",
+        time    : 2000,
+        channel : "",
+        stop    : "false"  //trueの場合自動的に次の命令へ移動しない。ロード対策
+    },
+
+    start: function(pm) {
+
+        var that,
+            channel_map,
+            browser,
+            audio_obj;
+
+        that = this;
+
+        channel_map = this.kag.tmp.map_audio[pm.channel];
+
+        browser = $.getBrowser();
+
+        //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
+        if (pm.stop == "false") {
+            that.kag.stat.current_audio[pm.channel] = [];
+        }
+
+        //アプリで再生している場合
+        if (that.kag.define.FLAG_APRI == true) {
+
+            for (key in channel_map) {
+
+                audio_obj = channel_map[key];
+
+                delete that.kag.tmp.map_audio[pm.channel][key];
+
+                audio_obj.statusCallback = undefined; // clear statusCallback to prevent restart looped sound
+                //上記マップを削除した後に、ストップ処理を行うといいのではないか。 
+                audio_obj.stop();
+                audio_obj.release();
+
+            }
+
+        } else {
+
+            for (key in channel_map) {
+
+                audio_obj = channel_map[key];
+
+                delete that.kag.tmp.map_audio[pm.channel][key];
+
+                //フェードアウトしながら再生停止
+                if (pm.fadeout == "true") {
+
+                    var vars = jQuery.extend($('<div>')[0], { volume: audio_obj.volume });
+
+                    $(vars).stop().animate({ volume: 0 }, {
+                        easing: "linear",
+                        duration: parseInt(pm.time),
+                        step: function() {
+                            audio_obj.volume = this.volume; // this == vars
+                        },
+                        complete: function() {
+                            audio_obj.pause();
+                        }
+                    });
+
+                } else {
+
+                    audio_obj.pause();
+
+                }
+
+            }
+        }
+
+        if (pm.stop == "false") {
+            this.kag.ftag.nextOrder();
+        }
+    }
+
+};
 
 /*
 #[playbgm]
@@ -24,270 +327,19 @@ click=スマートフォンのブラウザから閲覧した場合のみ動作�
 
 //音楽再生
 tyrano.plugin.kag.tag.playbgm = {
-    
+
     vital:["storage"],
-    
+
     pm:{
         loop:"true",
         storage:"",
-        fadein:"false",
-        time:2000,
-        target:"bgm", //"bgm" or "se"
-        click:"false", //音楽再生にクリックが必要か否か
-        stop:"false"  //trueの場合自動的に次の命令へ移動しない。ロード対策
-        
+        channel:"bgm"
     },
-    
+
     start:function(pm){
-        
-        var that = this;
-        
-        
-        if(pm.target=="bgm" && that.kag.stat.play_bgm == false){
-            that.kag.ftag.nextOrder();
-            return ;
-        }
-        
-        if(pm.target=="se" && that.kag.stat.play_se == false){
-            that.kag.ftag.nextOrder();
-            return ;
-        }
-        
-        
-        //スマホアプリの場合
-        if(that.kag.define.FLAG_APRI == true){
-        
-            that.playGap(pm);
-        
-        //スマホからのアクセスの場合は、クリックを挟む
-        }else if($.userenv() !="pc"){
-            
-            this.kag.layer.hideEventLayer();
-            //スマホからの場合、スキップ中は音楽をならさない
-            if(this.kag.stat.is_skip == true && pm.target=="se"){
-               that.kag.layer.showEventLayer();
-               that.kag.ftag.nextOrder();
-               
-           }else{
-               
-               if(pm.click == "true"){
-                    
-                    $(".tyrano_base").bind("click.bgm",function(){
-                    
-                        that.play(pm);
-                        $(".tyrano_base").unbind("click.bgm");
-                        that.kag.layer.showEventLayer();
-                     
-                    });
-                
-               }else{
-                    
-                     that.play(pm);
-                     $(".tyrano_base").unbind("click.bgm");
-                     that.kag.layer.showEventLayer();
-                     
-               }
-                
-            }
-            
-        }else{
-            
-            var browser = $.getBrowser();
-            
-            if(browser == "firefox" || browser =="opera" ){
-                
-                //swfによる音楽の再生を廃止
-                //that.playSwf(pm); 
-                that.play(pm);
-                
-            }else{
-            	that.play(pm);
-                
-            }
-        }
-         
-    },
-    
-    play:function(pm){
-        
-        var that = this;
-        
-        var target = "bgm";
-        
-        if(pm.target =="se"){
-            target = "sound";
-        }
-        
-        var storage_url = "";
-        
-         if($.isHTTP(pm.storage)){
-    	 	storage_url = pm.storage;	
-    	 }else{
-    	    storage_url = "./data/"+target+"/" + pm.storage;
-    	 }
-        
-        //音楽再生
-        var audio_obj = new Audio(storage_url);
-        if(pm.loop =="true"){
-            audio_obj.loop = true;
-           
-           audio_obj.onended=function(){
-                    this.play();
-           }; 
-        }
-        
-        if(target ==="bgm"){
-            this.kag.tmp.map_bgm[pm.storage] = audio_obj;
-            that.kag.stat.current_bgm = pm.storage;
-            
-        }else{
-            this.kag.tmp.map_se[pm.storage] = audio_obj;
-        }
-        
-        audio_obj.play();
-        
-        if(pm.fadein =="true"){
-            
-            var vars = jQuery.extend($('<div>')[0], { volume: 0 });
-            
-            $(vars).stop().animate({ volume: 1 }, {
-                easing: "linear",
-                duration: parseInt(pm.time),
-                step: function() {
-                    audio_obj.volume = this.volume; // this == vars
-                },
-                complete:function(){
-                    //alert("complete fade");
-                    //that.kag.ftag.completeTrans();   
-                }
-            });
-        
-        }
-        
-        if(pm.stop == "false"){
-        
-            this.kag.ftag.nextOrder();
-        }
-    },
-    
-    //phonegapで再生する
-    playGap:function(pm){
-        
-        var that = this;
-        
-        var target = "bgm";
-        if(pm.target =="se"){
-            target = "sound";
-        }
-        
-        var audio_obj = null;
-        
-        if(target ==="bgm"){
-            this.kag.stat.current_bgm = pm.storage;
-        }
-        
-        //iphone の場合
-        var src_url = "./data/"+target+"/"+ pm.storage;
-        
-        //android ならパス表記変更
-        if($.userenv()==="android" || $.userenv()==="andoroid"){
-            src_url = $.getBaseURL()+"data/"+target+"/"+ pm.storage;
-        }
-        
-        var audio_obj = new Media(src_url,
- 
-           function(){
-                        
-                                  
-                        if(pm.loop == "true"){
-                            
-                                  var tmp_obj = null;
-                                  
-                                  if(pm.target =="bgm"){
-                                    tmp_obj = that.kag.tmp.map_bgm[pm.storage] ;
-                                  }else{
-                                    tmp_obj = that.kag.tmp.map_se[pm.storage];
-                                  }
-                                  
-                                  if(tmp_obj != null){
-                                    audio_obj.play();
-                                  }
-                        
-                        }
-                        
-             });
-
-        
-        if(pm.target =="bgm"){
-            this.kag.tmp.map_bgm[pm.storage] = audio_obj;
-        }else{
-            this.kag.tmp.map_se[pm.storage] = audio_obj;
-        }
-        
-        //audio_obj.play();     
-        //setTimeout(function(){audio_obj.play();},300);
-		
-		this.playAudio(audio_obj);
-
-		
-        if(pm.stop == "false"){
-        
-            this.kag.ftag.nextOrder();
-        
-        }
-        
-        
-    },
-    
-    playAudio:function(audio_obj){
-    	audio_obj.play();
-    },
-    
-    //フラッシュで再生する
-    playSwf:function(pm){
-        
-        var target = "bgm";
-        
-        if(pm.target =="se"){
-            target = "sound";
-        }
-        
-        
-        var repeat = 1;
-        
-        if(pm.loop =="true"){
-            repeat = 9999;
-        }
-        
-        
-        var target = "bgm";
-        if(pm.target =="se"){
-            target = "sound";
-        }
-        
-        var storage_url = "";
-        
-         if($.isHTTP(pm.storage)){
-    	 	storage_url = pm.storage;	
-    	 }else{
-    	    storage_url = "./data/"+target+"/" + pm.storage;
-    	 }
-        
-        if(target ==="bgm"){
-            this.kag.stat.current_bgm = pm.storage;
-            this.kag.sound_swf.playMusic(storage_url ,repeat);
-        }else{
-            this.kag.sound_swf.playSound(storage_url ,repeat);
-        }
-        
-        
-        if(pm.stop == "false"){
-            this.kag.ftag.nextOrder();
-        }
-        
-        
+        this.kag.ftag.startTag("playaudio",pm);
     }
-    
+
 };
 
 
@@ -309,150 +361,13 @@ BGMの停止
 tyrano.plugin.kag.tag.stopbgm = {
 
     pm:{
-        fadeout:"false",
-        time:2000,
-        target:"bgm",
-        stop:"false"  //trueの場合自動的に次の命令へ移動しない。ロード対策
-        
+        channel:"bgm",
     },
 
     start:function(pm){
-        
-        var that = this;
-        
-        var target_map =null;
-        
-        if(pm.target =="bgm"){
-            target_map = this.kag.tmp.map_bgm;
-        }else{
-            target_map = this.kag.tmp.map_se;
-        }
-        
-        var browser = $.getBrowser();
-        
-        //アプリで再生している場合
-        if(that.kag.define.FLAG_APRI == true){
-            //
-             for(key in target_map ){
-                    
-                    (function(){
-                        
-                        var _key = key;
-                        var _audio_obj = null;
-                        
-                        if(pm.target ==="bgm"){
-                            _audio_obj = target_map[_key];
-                             
-                             //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
-                              if(pm.stop == "false"){
-                                that.kag.stat.current_bgm = "";
-                              }
-                              
-                        }else{
-                            _audio_obj = target_map[_key];
-                        }
-                        
-                        if(pm.target ==="bgm"){
-                            that.kag.tmp.map_bgm[_key] = null;
-                            delete that.kag.tmp.map_bgm[_key] ;
-                         }else{
-                            that.kag.tmp.map_se[_key] = null;
-                            delete that.kag.tmp.map_se[_key] ;
-                         }
-                        
-                        //上記マップを削除した後に、ストップ処理を行うといいのではないか。 
-                        _audio_obj.stop();
-                        _audio_obj.release();
-                        
-                         
-                    })();
-                    
-            }
-            
-        //フラッシュで再生している場合
-        }else if(browser == "firefox" || browser =="opera"){
-            
-            
-            this.kag.sound_swf.stopMusic();
-            
-            //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
-            
-            var target = "bgm";
-            if(pm.target =="se"){
-                target = "sound";
-            }
-            if(target ==="bgm"){
-                 //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
-                 if(pm.stop == "false"){
-                    that.kag.stat.current_bgm = "";
-                 }
-            }
-        
-            
-        }else{
-        
-            
-            for(key in target_map ){
-                    
-                    (function(){
-                        
-                        var _key = key;
-                        
-                        var _audio_obj = null;
-                        
-                        if(pm.target ==="bgm"){
-                            _audio_obj = target_map[_key];
-                             
-                             //ロード画面の場合、再生中の音楽はそのまま、直後にロードするから
-                              if(pm.stop == "false"){
-                                that.kag.stat.current_bgm = "";
-                              }
-                              
-                        }else{
-                            _audio_obj = target_map[_key];
-                        }
-                        
-                        //フェードアウトしながら再生停止
-                        if(pm.fadeout =="true"){
-                            
-                            var vars = jQuery.extend($('<div>')[0], { volume: 1 });
-                            
-                            $(vars).stop().animate({ volume: 0 }, {
-                                easing: "linear",
-                                duration: parseInt(pm.time),
-                                step: function() {
-                                    _audio_obj.volume = this.volume; // this == vars
-                                },
-                                complete: function() {
-                                    _audio_obj.pause();
-                                    //that.kag.ftag.completeTrans();
-                                }
-                            });
-                        
-                        }else{
-                            
-                            _audio_obj.pause();
-                            
-                            if(pm.target ==="bgm"){
-                                delete that.kag.tmp.map_bgm[_key] ;
-                                
-                            }else{
-                                delete that.kag.tmp.map_se[_key] ;
-                                
-                            }
-                        
-                        }
-                    
-                    })();
-                    
-            }
-        }
-        
-        if(pm.stop == "false"){
-            this.kag.ftag.nextOrder();
-        }
+        this.kag.ftag.startTag("stopaudio",pm);
     }
-    
+
 
 };
 
@@ -477,20 +392,20 @@ time=フェードインを行なっている時間をミリ秒で指定します
 */
 
 tyrano.plugin.kag.tag.fadeinbgm = {
-    
-    vital:["storage","time"],
-    
+
+    vital:["storage"],
+
     pm:{
         loop:"true",
         storage:"",
         fadein:"true",
-        time:2000
+        channel:"bgm"
     },
-    
+
     start:function(pm){
-        this.kag.ftag.startTag("playbgm",pm);
+        this.kag.ftag.startTag("playaudio",pm);
     }
-    
+
 };
 
 
@@ -511,20 +426,16 @@ time=フェードアウトを行なっている時間をミリ秒で指定しま
 #[end]
 */
 tyrano.plugin.kag.tag.fadeoutbgm = {
-    
-    //vital:["time"],
-    
+
     pm:{
-        loop:"true",
-        storage:"",
-        fadeout:"true",
-        time:2000
+        fadeout: "true",
+        channel: "bgm"
     },
-    
+
     start:function(pm){
-        this.kag.ftag.startTag("stopbgm",pm);
+        this.kag.ftag.startTag("stopaudio",pm);
     }
-    
+
 };
 
 
@@ -550,24 +461,24 @@ time=クロスフェードを行なっている時間をミリ秒で指定しま
 */
 
 tyrano.plugin.kag.tag.xchgbgm = {
-    
-    vital:["storage","time"],
-    
+
+    vital:["storage"],
+
     pm:{
         loop:"true",
         storage:"",
         fadein:"true",
         fadeout:"true",
-        time:2000
+        channel: "bgm"
     },
-    
+
     start:function(pm){
-        
-        this.kag.ftag.startTag("stopbgm",pm);
-        this.kag.ftag.startTag("playbgm",pm);
-        
+
+        this.kag.ftag.startTag("stopaudio",pm);
+        this.kag.ftag.startTag("playaudio",pm);
+
     }
-    
+
 };
 
 
@@ -591,26 +502,25 @@ clear=trueまたはfalse(デフォルト) 他のSEが鳴っている場合、tru
 */
 
 tyrano.plugin.kag.tag.playse = {
-    
+
     vital:["storage"],
-    
+
     pm:{
         storage:"",
-        target:"se",
-        loop:"false",
+        channel:"se",
         clear:"false" //他のSEがなっている場合、それをキャンセルして、新しく再生します
     },
-    
+
     start:function(pm){
-        
+
         if(pm.clear == "true"){
-            this.kag.ftag.startTag("stopbgm",{target:"se",stop:"true"});
+            this.kag.ftag.startTag("stopaudio",{channel:"se",stop:"true"});
         }
-        
-        this.kag.ftag.startTag("playbgm",pm);
-        
+
+        this.kag.ftag.startTag("playaudio",pm);
+
     }
-    
+
 };
 
 /*
@@ -628,18 +538,15 @@ tyrano.plugin.kag.tag.playse = {
 */
 
 tyrano.plugin.kag.tag.stopse = {
-    
+
     pm:{
-        storage:"",
-        fadeout:"false",
-        time:2000,
-        target:"se"
+        cahnnel:"se"
     },
-    
+
     start:function(pm){
-        this.kag.ftag.startTag("stopbgm",pm);
+        this.kag.ftag.startTag("stopaudio",pm);
     }
-    
+
 };
 
 /*
@@ -660,24 +567,21 @@ time=フェードインの時間をミリ秒で指定します
 */
 
 tyrano.plugin.kag.tag.fadeinse = {
-    
-    vital:["storage","time"],
-    
+
+    vital:["storage"],
+
     pm:{
         storage:"",
-        target:"se",
-        loop:"false",
-        fadein:"true",
-        time:"2000"
-        
+        channel:"se",
+        fadein:"true"
     },
-    
+
     start:function(pm){
-        
-        this.kag.ftag.startTag("playbgm",pm);
-        
+
+        this.kag.ftag.startTag("playaudio",pm);
+
     }
-    
+
 };
 
 /*
@@ -696,20 +600,18 @@ time=フェードアウトを行なっている時間をミリ秒で指定しま
 */
 
 tyrano.plugin.kag.tag.fadeoutse = {
-    
+
     pm:{
-        storage:"",
-        target:"se",
-        loop:"false",
+        channel:"se",
         fadeout:"true"
     },
-    
+
     start:function(pm){
-        
-        this.kag.ftag.startTag("stopbgm",pm);
-        
+
+        this.kag.ftag.startTag("stopaudio",pm);
+
     }
-    
+
 };
 
 /*
@@ -727,19 +629,19 @@ BGMの再生完了を待ちます
 
 //BGMのフェード完了を待ちます
 tyrano.plugin.kag.tag.wb = {
-    
+
     pm:{
     },
     start:function(){
         this.kag.layer.hideEventLayer();
-        
+
     }
 };
 
 
 //未実装　seの再生終了を待ちます 
 tyrano.plugin.kag.tag.wc = {
-    
+
     pm:{
     },
     start:function(){

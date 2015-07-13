@@ -407,25 +407,24 @@ tyrano.plugin.kag.menu ={
         
         
         //一旦音楽と効果音は全て止めないと
-        
-        this.kag.ftag.startTag("stopbgm",{stop:"true"});
-        this.kag.ftag.startTag("stopse",{stop:"true"});
-         
+        for (var layer in this.kag.tmp.audio_channels) {
+            this.kag.ftag.startTag(
+                "stopaudio",
+                {
+                    channel: layer,
+                    stop:    "true"
+                }
+            );
+        }
+
         //音楽再生
-        if(this.kag.stat.current_bgm != ""){
-        
-            var mstorage = this.kag.stat.current_bgm;
-            
-            var pm ={
-                loop:"true",
-                storage:mstorage,
-                /*fadein:"true",*/
-                /*time:2000,*/
-                stop:"true"
-            };
-                    
-            this.kag.ftag.startTag("playbgm",pm);
-    
+        if (this.kag.stat.current_audio) {
+            for (var layer in this.kag.stat.current_audio) {
+                this.kag.stat.current_audio[layer].forEach(function(item){
+                    item.stop = "true"; // prevent step to next tag
+                    that.kag.ftag.startTag("playaudio",item);
+                });
+            }
         }
         
         //カーソルの復元
